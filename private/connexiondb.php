@@ -8,7 +8,7 @@
 function connexionDb()
 {
     $host = "localhost";
-    $dbname = "clockwork";
+    $dbname = "edf_db";
     $user = "root";
     $pass = "";
     try {

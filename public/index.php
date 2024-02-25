@@ -5,6 +5,5 @@
 // Tel : 698066896
 // github : github.com/saliemmanuel
 
-require("../private/include.php");
-$navigator = new Navigator();
-$navigator->getApi($_POST['service']);
+
+header("location:pages/info_client.php");

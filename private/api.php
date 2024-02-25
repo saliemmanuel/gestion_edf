@@ -1,5 +1,5 @@
 <?php
-
+include "connexiondb.php";
 // @autor 
 // SALI EMMANUEL
 // Tel : 698066896
@@ -8,310 +8,114 @@
 class API
 {
 
-    //Service inscription utilisateur
-    public function inscription($bdd)
+    public function redirectionPageDemandeBranchement()
     {
-        $name = $_POST["name"];
-        $surname = $_POST["surname"];
-        $email = $_POST["email"];
-        $password = md5($_POST["password"]);
-        $phone = $_POST["phone"];
-        $picture = $_POST["picture"];
-        $isactive = $_POST["isactive"];
-        $ville_id = $_POST["ville_id"];
-        $status = $_POST["status"];
-        $compte = $_POST["compte"];
+        // recuperation des informations de l'utilisateur
+        $nom = isset($_POST['nom']) ? $_POST['nom'] : "";
+        $prenom = isset($_POST['prenom']) ? $_POST['prenom'] : "";
+        $telephone = isset($_POST['telephone']) ? $_POST['telephone'] : "";
+        $_SESSION['nom'] = $nom;
+        $_SESSION['prenom'] = $prenom;
+        $_SESSION['telephone'] = $telephone;
+        header('location:demande_branchement.php');
+    }
 
-        if ($compte == 'client') {
-            $requet1 = 'INSERT INTO `clients`(`id`, `name`, `surname`, `email`, 
-            `password`, `phone`, `picture`, `isactive`, `ville_id`, `created_at`, 
-            `updated_at`) VALUES (NULL,"' . $name . '","' . $surname . '",
-            "' . $email . '","' . $password . '","' . $phone . '",
-            "' . $picture . '","' . $isactive . '","' . $ville_id . '",
-            "' . $email . '","' . $email . '")';
-        } else {
-            $requet1 = 'INSERT INTO `prestataires`(`id`, `name`, `surname`, 
-            `email`, `password`, `status`, `phone`, `picture`, 
-            `isactive`, `ville_id`, `created_at`, `updated_at`) 
-            VALUES (NULL,"' . $name . '","' . $surname . '",
-            "' . $email . '","' . $password . '","' . $status . '","' . $phone . '",
-            "' . $picture . '","' . $isactive . '","' . $ville_id . '",
-            "' . $email . '","' . $email . '")';
+    public function redirectionPageDevis()
+    {
+        // recuperation des informations propre au lotissement
+        $nom = isset($_POST['nom_lotissement']) ? $_POST['nom_lotissement'] : "";
+        $rue = isset($_POST['rue_lotissement']) ? $_POST['rue_lotissement'] : "";
+        $commune = isset($_POST['commune_lotissement']) ? $_POST['commune_lotissement'] : "";
+        $_SESSION['nom_lotissement'] = $nom;
+        $_SESSION['rue_lotissement'] = $rue;
+        $_SESSION['commune_lotissement'] = $commune;
+        header('location:page_devis.php');
+    }
+
+    public function insertionSousTraitant($code_sous_traitant)
+    {
+
+        // information proppre au sous traitant
+        $bdd = connexionDb();
+        $nom_sous_traitant = isset($_POST['nom_sous_traitant']) ? $_POST['nom_sous_traitant'] : "";
+        $telephone_sous_traitant = isset($_POST['telephone_sous_traitant']) ? $_POST['nom_sous_traitant'] : "";
+        $id_zei = isset($_POST['zei']) ? $_POST['zei'] : "";
+
+        // Information propre au contract
+        $code_contract = rand(100000000, 999999999);
+        $nom_contract = "CT-" . $nom_sous_traitant;
+
+        // insertion dans la table sous traitant
+        $sql = 'INSERT INTO `sous_traitant`( 
+        `CODE_SOUS_TRAITANT`, `NOM_SOUS_TRAITANT`, 
+        `ADRESSE_SOUS_TRAITANT`) 
+        VALUES ("' . $code_sous_traitant . '","' . $nom_sous_traitant . '",
+        "' . $telephone_sous_traitant . '")';
+        $data = $bdd->prepare($sql);
+        $resultat = $data->execute();
+        if ($resultat) {
+            // recuperation de l'id du sous traitant
+            $sql_select = 'SELECT * FROM `sous_traitant` 
+            WHERE `CODE_SOUS_TRAITANT` = "' . $code_sous_traitant . '"';
+            $data = $bdd->prepare($sql_select);
+            $data->execute();
+            $val = $data->fetch();
+            $id_sous_traitant = $val['ID_SOUS_TRAITANT'];
+
+            // insertion dans la table contract
+            $sql_contract = 'INSERT INTO `contrat` 
+            (`CODE_CONTRACT`, `NOM_CONTRACT`, `ID_SOUS_TRAITANT`) 
+            VALUES ("' . $code_contract . '","' . $nom_contract . '",
+            "' . $id_sous_traitant . '")';
+            $data_contract = $bdd->prepare($sql_contract);
+            $data_contract->execute();
+
+            // recuperation de l'id du contract
+            $sql_select_contract = 'SELECT * FROM `contrat` 
+            WHERE `CODE_CONTRACT` = "' . $code_contract . '"';
+            $data_contract = $bdd->prepare($sql_select_contract);
+            $resultat_select_contract = $data_contract->execute();
+            $val_contract = $data_contract->fetch();
+            $id_contract = $val_contract['ID_CONTRAT'];
+
+            // recuperation des jours de travail
+            $jours = "";
+            if (isset($_POST['jour'])) {
+                $couleursSelectionnees = $_POST['jour'];
+                foreach ($couleursSelectionnees as $couleur) {
+                    $jours .= "," . $couleur;
+                }
+            }
+
+            // insertion des jours de travail du sous traitant
+            $sql_jours = 'INSERT INTO `jour` 
+            (`JOUR`) 
+            VALUES ("' . $jours . '")';
+            $data_jours = $bdd->prepare($sql_jours);
+            $data_jours->execute();
+
+            // recuperation du dernier id de jour
+            $sql_select_last_id_jour = 'SELECT MAX(ID_JOUR) AS LAST_ID_JOUR FROM `jour`';
+            $data_last_id_jour = $bdd->prepare($sql_select_last_id_jour);
+            $data_last_id_jour->execute();
+            $val_last_id_jour = $data_last_id_jour->fetch();
+            $id_jour = $val_last_id_jour['LAST_ID_JOUR'];
+
+            // insertion dans la table signer 
+            $sql_signer = 'INSERT INTO `signer`
+            (`ID_CONTRAT`, `ID_JOUR`, `ID_ZEI`) 
+            VALUES ("' . $id_contract . '","' . $id_jour . '","' . $id_zei . '")';
+            $data_signer = $bdd->prepare($sql_signer);
+            $data_signer->execute();
         }
-        $prepare1 = $bdd->prepare($requet1);
-        $ins = $prepare1->execute();
-        if ($ins === false) {
-            $message = array('message' => 'E-mail déjà utiliser .', 'error' => '1');
-        } else {
-            $message =   array('message' => "Inscription effectué", 'error' => '0');
-        }
-        return  json_encode(array($message), JSON_UNESCAPED_UNICODE);
-    }
-    
-    // service connexion utilisateur
-    public function connexion($bdd)
-    {
-        $email = $_POST["email"];
-        $password = md5($_POST["password"]);
-        $compte = $_POST["compte"];
-
-        if ($compte == 'client') {
-            $connexion = 'SELECT * FROM `clients` WHERE `email` ="' . $email . '" AND
-        `password` = "' . $password . '"';
-        } else {
-            $connexion = 'SELECT * FROM `prestataires` WHERE `email` ="' . $email . '" AND
-        `password` = "' . $password . '"';
-        }
-
-        $getConnexion = $bdd->prepare($connexion);
-        $getConnexion->execute();
-
-        $responce = $getConnexion->fetchAll(PDO::FETCH_ASSOC);
-        if (empty($responce)) {
-            $message = array('message' => "E-mail ou mot de passe incorrect.", "error" => '1');
-        } else {
-            $message = array(
-                'message' => "Connexion effectué "  . $compte, 'id' => $responce[0]['id'],
-                'name' => $responce[0]['name'],
-                'surname' => $responce[0]['surname'],
-                'email' => $responce[0]['email'],
-                'status' => $responce[0]['status'],
-                'phone' => $responce[0]['phone'],
-                'ville_id' => $responce[0]['ville_id'],
-                'isactive' => $responce[0]['isactive'],
-                'error' => '0'
-            );
-        }
-        return json_encode(array($message), JSON_UNESCAPED_UNICODE);
     }
 
-    public function getAnnonce($bdd)
+    public function getListZEI()
     {
-        $ann = "SELECT * FROM `annonces` WHERE 1 ORDER BY `annonces`.`id` DESC";
-        $get = $bdd->prepare($ann);
-        $get->execute();
-        $responce = $get->fetchAll(PDO::FETCH_ASSOC);
-        if (empty($responce)) {
-            $message = array('message' => "Aucune annonce disponible.", "error" => '1');
-        } else {
-            $message = array(
-                'message' => "Succès ",
-                'data' => $responce,
-                'error' => '0'
-            );
-        }
-        return json_encode(array($message), JSON_UNESCAPED_UNICODE);
-    }
-    public function getClientInf($bdd)
-    {
-        $client_id = $_POST['client_id'];
-        $getclient = 'SELECT * FROM `clients`  WHERE  `id` = "' . $client_id . '"';
-        $getConnexion = $bdd->prepare($getclient);
-        $getConnexion->execute();
-
-        $responce = $getConnexion->fetchAll(PDO::FETCH_ASSOC);
-        if (empty($responce)) {
-            $message = array('message' => "Erreur.", "error" => '1');
-        } else {
-            $message = array(
-                'message' => "effectué ", 'id' => $responce[0]['id'],
-                'name' => $responce[0]['name'],
-                'surname' => $responce[0]['surname'],
-                'email' => $responce[0]['email'],
-                'status' => $responce[0]['status'],
-                'phone' => $responce[0]['phone'],
-                'ville_id' => $responce[0]['ville_id'],
-                'isactive' => $responce[0]['isactive'],
-                'error' => '0'
-            );
-        }
-        return json_encode(array($message), JSON_UNESCAPED_UNICODE);
-    }
-    public function getPresInf($bdd)
-    {
-        $client_id = $_POST['prestataire_id'];
-        $getclient = 'SELECT * FROM `prestataires`  WHERE  `id` = "' . $client_id . '"';
-        $getConnexion = $bdd->prepare($getclient);
-        $getConnexion->execute();
-
-        $responce = $getConnexion->fetchAll(PDO::FETCH_ASSOC);
-        if (empty($responce)) {
-            $message = array('message' => "Erreur.", "error" => '1');
-        } else {
-            $message = array(
-                'message' => "effectué ", 'id' => $responce[0]['id'],
-                'name' => $responce[0]['name'],
-                'surname' => $responce[0]['surname'],
-                'email' => $responce[0]['email'],
-                'status' => $responce[0]['status'],
-                'phone' => $responce[0]['phone'],
-                'ville_id' => $responce[0]['ville_id'],
-                'isactive' => $responce[0]['isactive'],
-                'error' => '0'
-            );
-        }
-        return json_encode(array($message), JSON_UNESCAPED_UNICODE);
-    }
-
-    public function getDiscution($bdd)
-    {
-        $compte = $_POST['compte'];
-        $client_id = $_POST['client_id'];
-        $prestataire_id = $_POST['prestataire_id'];
-        if ($compte == 'client') {
-            $req = 'SELECT * FROM `messages` WHERE client_id =  "' . $client_id . '"
-              GROUP BY  `prestataire_id`; ';
-        } else {
-            $req = 'SELECT * FROM `messages` WHERE `prestataire_id` = "' . $prestataire_id . '" 
-            GROUP BY  `client_id` ';
-        }
-        $get = $bdd->prepare($req);
-        $get->execute();
-        $responce = $get->fetchAll(PDO::FETCH_ASSOC);
-        if (empty($responce)) {
-            $message = array('message' => "Indisponible.", "error" => '1');
-        } else {
-            $message = array(
-                'message' => "Succès ",
-                'data' => $responce,
-                'error' => '0'
-            );
-        }
-        return json_encode(array($message), JSON_UNESCAPED_UNICODE);
-    }
-
-    public function getConversation($bdd)
-    {
-        $client_id = $_POST['client_id'];
-        $prestataire_id = $_POST['prestataire_id'];
-        $req = 'SELECT * FROM `messages` WHERE  `client_id` = "' . $client_id . '"  
-        AND `prestataire_id` = "' . $prestataire_id . '" ';
-        $get = $bdd->prepare($req);
-        $get->execute();
-        $responce = $get->fetchAll(PDO::FETCH_ASSOC);
-        if (empty($responce)) {
-            $message = array('message' => "Indisponible.", "error" => '1');
-        } else {
-            $message = array(
-                'message' => "Succès ",
-                'data' => $responce,
-                'error' => '0'
-            );
-        }
-        return json_encode(array($message), JSON_UNESCAPED_UNICODE);
-    }
-    public function sendMessage($bdd)
-    {
-        $message = $_POST['message'];
-        $readstatus = $_POST['readstatus'];
-        $receivedstatus = $_POST['receivedstatus'];
-        $deletestatus = $_POST['deletestatus'];
-        $client_id = $_POST['client_id'];
-        $prestataire_id = $_POST['prestataire_id'];
-        $created_at = $_POST['created_at'];
-
-        $req = 'INSERT INTO `messages` (`id`, `message`, `readstatus`, 
-       `receivedstatus`, `deletestatus`, `client_id`, `prestataire_id`, 
-       `created_at`, `updated_at`) VALUES 
-       (NULL, "' . $message . '" , "' . $readstatus . '", "' . $receivedstatus . '", 
-       "' . $deletestatus . '", "' . $client_id . '", "' . $prestataire_id . '", "' . $created_at . '", NULL)';
-        $get = $bdd->prepare($req);
-        $get->execute();
-    }
-
-    public function getPubForPresta($bdd)
-    {
-        $prestataire_id = $_POST['prestataire_id'];
-        $re = 'SELECT * FROM `publications` WHERE `prestataire_id` = "' . $prestataire_id . '"';
-        $getConnexion = $bdd->prepare($re);
-        $getConnexion->execute();
-
-        $responce = $getConnexion->fetchAll(PDO::FETCH_ASSOC);
-        if (empty($responce)) {
-            $message = array('message' => "Erreur.", "error" => '1');
-        } else {
-            $message = array(
-                'message' => "effectué ",
-                'data' => $responce,
-                'error' => '0'
-            );
-        }
-        return json_encode(array($message), JSON_UNESCAPED_UNICODE);
-    }
-
-    public function getPubForClient($bdd)
-    {
-        $client_id = $_POST['client_id'];
-        $re = 'SELECT *  FROM `annonces` WHERE  `client_id` = "' . $client_id . '"';
-        $getConnexion = $bdd->prepare($re);
-        $getConnexion->execute();
-
-        $responce = $getConnexion->fetchAll(PDO::FETCH_ASSOC);
-        if (empty($responce)) {
-            $message = array('message' => "Erreur.", "error" => '1');
-        } else {
-            $message = array(
-                'message' => "effectué ",
-                'data' => $responce,
-                'error' => '0'
-            );
-        }
-        return json_encode(array($message), JSON_UNESCAPED_UNICODE);
-    }
-    
-    public function putPub($bdd)
-    {
-        $title = $_POST['title'];
-        $description = $_POST['description'];
-        $prestataire_id = $_POST['prestataire_id'];
-
-        $re = 'INSERT INTO `publications` (`id`, `title`, `description`,
-         `picture`, `prestataire_id`, `created_at`, `updated_at`)
-         VALUES (NULL, "' . $title . '", "' . $description . '", 
-         "' . $prestataire_id . '", "' . $prestataire_id . '", NULL, NULL)';
-        $getConnexion = $bdd->prepare($re);
-        $getConnexion->execute();
-    }
-    public function putAnn($bdd)
-    {
-        $title = $_POST['title'];
-        $description = $_POST['description'];
-        $client_id = $_POST['client_id'];
-
-        $re = 'INSERT INTO `annonces`(`id`, `title`, `description`,
-         `picture`, `client_id`, `created_at`, `updated_at`)
-         VALUES (NULL, "' . $title . '", "' . $description . '", 
-         "' . $client_id . '", "' . $client_id . '", NULL, NULL)';
-        $getConnexion = $bdd->prepare($re);
-        $getConnexion->execute();
-    }
-
-    public function getPublication($bdd)
-    {
-        $ann = "SELECT * FROM `publications` WHERE 1";
-        $get = $bdd->prepare($ann);
-        $get->execute();
-        $responce = $get->fetchAll(PDO::FETCH_ASSOC);
-        if (empty($responce)) {
-            $message = array('message' => "Aucune annonce disponible.", "error" => '1');
-        } else {
-            $message = array(
-                'message' => "Succès ",
-                'data' => $responce,
-                'error' => '0'
-            );
-        }
-        return json_encode(array($message), JSON_UNESCAPED_UNICODE);
-    }
-
-    //GESTION DES ERREURS DE L'API 
-    public function serviceInconnu()
-    {
-        return json_encode(array(["message" => "serviceInconnu", "error" => "1"]));
-    }
-
-    public function errorService()
-    {
-        return json_encode(array(["message" => "errorService", "error" => "1"]));
+        $bdd = connexionDb();
+        $sql = 'SELECT * FROM `zei`';
+        $da = $bdd->query($sql);
+        $list_zei = $da->fetchAll();
+        return $list_zei;
     }
 }
