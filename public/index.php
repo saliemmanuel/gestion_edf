@@ -6,4 +6,4 @@
 // github : github.com/saliemmanuel
 
 
-header("location:pages/info_client.php");
+header("location:pages/index.php");

@@ -10,6 +10,10 @@ if (isset($_POST['submit'])) {
  $api->insertionSousTraitant($code_sous_traitant);
 }
 
+if (isset($_POST['cancel'])) {
+ header("location:../pages/index.php");
+}
+
 if (isset($_SESSION['erreurLogin'])) {
  $erreurLogin = $_SESSION['erreurLogin'];
 } else {
@@ -29,11 +33,17 @@ if (isset($_SESSION['erreurLogin'])) {
  <div class="container col-md-6 col-md-offset-3 col-lg-4 col-lg-offset-4">
   <div class="panel panel-primary margetop60">
    <div class="panel-heading">
+    <h3><img src="header.png" width="100%"></h3>
     <h3>Page ajout sous-trant</h3>
+    <br>
+    <?php if (!empty($_SESSION['success_sous_traitant'])) { ?>
+     <div class="alert alert-success">
+      <?php echo $_SESSION['success_sous_traitant'] ?>
+     </div>
+    <?php } ?>
    </div>
    <div class="panel-body">
     <form method="post" action="" class="form">
-     </br>
      <div class="form-group">
       <label for="login">Nom et prénom sous-traitant</label>
       <input type="text" name="nom_sous_traitant" placeholder="Nom et prénom sous-traitant" class="form-control" autocomplete="off" required />
@@ -79,7 +89,7 @@ if (isset($_SESSION['erreurLogin'])) {
 
      <br>
      <br>
-     <button type="submit" class="btn btn-danger" name="submit">
+     <button type="submit" class="btn btn-danger" name="cancel">
       <span class="glyphicon glyphicon-remove-circle"></span>
       Annuler
      </button>

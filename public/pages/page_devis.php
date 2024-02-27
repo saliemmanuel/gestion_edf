@@ -2,16 +2,33 @@
 session_start();
 include "../../private/api.php";
 if (isset($_POST['submit'])) {
+
  $api = new API();
- $api->redirectionPageDemandeBranchement();
+ $api->redirectionPageSelectionZEI();
 }
 
+if (isset($_POST['cancel'])) {
+ header("location:../pages/index.php");
+}
+$montant = "";
+//estimation devis
+$type_branchement = $_SESSION['type_branchement'];
+if ($type_branchement == "neuf") {
+ $montant = "10000";
+}
+if ($type_branchement == "provisoire") {
+ $montant = "5000";
+}
+if ($type_branchement == "modification") {
+ $montant = "3000";
+}
 if (isset($_SESSION['erreurLogin'])) {
  $erreurLogin = $_SESSION['erreurLogin'];
 } else {
  $erreurLogin = "";
 }
 ?>
+
 <HTML>
 
 <head>
@@ -25,30 +42,25 @@ if (isset($_SESSION['erreurLogin'])) {
  <div class="container col-md-6 col-md-offset-3 col-lg-4 col-lg-offset-4">
   <div class="panel panel-primary margetop60">
    <div class="panel-heading">
+    <h3><img src="header.png" width="100%"></h3>
+
     <h3>Votre dévis est le suivant</h3>
    </div>
    <div class="panel-body">
     <form method="post" action="" class="form">
-
-     <?php if (!empty($erreurLogin)) { ?>
-      <div class="alert alert-danger">
-       <?php echo $erreurLogin ?>
-      </div>
-     <?php } ?>
      </br>
      <div class="form-group">
-      <label for="login">Date</label>
-      <input type="text" name="nom_lotissement" placeholder=<?=date("Y/m/d")?> class="form-control" autocomplete="off" required />
-     </div>
-
-     <div class="form-group">
       <label for="login">Montant</label>
-      <input type="text" name="rue_lotissement" placeholder="300000" class="form-control" autocomplete="off" required />
+      <input type="text" name="montant" placeholder=<?= $montant ?> value="<?= $montant ?>" disabled class="form-control" autocomplete="off" required />
      </div>
-
-
+     <div class="form-group">
+      <label for="date">Date</label>
+      <input type="text" name="date" disabled value=<?= date("d/m/Y") ?> placeholder=<?= date("d/m/Y") ?> class="form-control" autocomplete="off" required />
+     </div>
      <br>
-     <button type="submit" class="btn btn-danger" name="submit">
+     <h6>NB : Vous pouvez accepter le devis ou annuler</h6>
+     <br>
+     <button type="submit" class="btn btn-danger" name="cancel">
       <span class="glyphicon glyphicon-remove-circle"></span>
       Annuler
      </button>
